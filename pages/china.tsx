@@ -1,22 +1,63 @@
-import React from "react";
+import { useEffect } from 'react';
+import { google } from 'googleapis';
+import path from 'path';
+import { promises as fs } from 'fs';
 
-const ChinaPage = () => {
+export async function getStaticProps() {
+  const credentialsPath = path.join(process.cwd(), 'opproject-459908-credentials.json');
+  const credentials = JSON.parse(await fs.readFile(credentialsPath, 'utf8'));
+
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+  });
+
+  const sheets = google.sheets({ version: 'v4', auth });
+  const spreadsheetId = '1GzykJ0MZpEXgZBnroEg0XpzT8_MEjArgyEnIC_hQDwQ';
+
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: 'コメント用!A1',
+  });
+
+  const comment = response.data.values?.[0]?.[0] ?? 'コメントが見つかりませんでした';
+
+  return {
+    props: {
+      comment,
+    },
+    revalidate: 60,
+  };
+}
+
+export default function ChinaPage({ comment }: { comment: string }) {
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://e.infogram.com/js/dist/embed-loader-min.js';
+    script.async = true;
+    script.id = 'infogram-async';
+    document.body.appendChild(script);
+
+    return () => {
+      document.getElementById('infogram-async')?.remove();
+    };
+  }, []);
+
   return (
-    <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>訪日中国人数の推移</h1>
-      <iframe
-        title="訪日中国人グラフ"
-        width="100%"
-        height="600"
-        src="https://e.infogram.com/1pg2n932znqe3wf9mvelrnmvj3c2pvgxxl?src=embed"
-        allowFullScreen
-      ></iframe>
-      <p style={{ marginTop: "1rem" }}>
-        コロナ前の2019年には訪日中国人数が約960万人と過去最高を記録しました。
-        一方で、2023年は約240万人と、依然として回復の途上にあります。
-      </p>
-    </main>
-  );
-};
+    <div className="p-4">
+      <h1 className="text-xl font-bold mb-2">訪日中国人数の推移</h1>
 
-export default ChinaPage;
+      {/* ✅ Hydration-safe: クライアント側のみで埋め込む */}
+      <div
+        className="infogram-embed"
+        data-id="_/eWNhHjBxtMNjwWupHu5s"
+        data-type="interactive"
+        data-title=""
+      ></div>
+
+      <div className="mt-4">
+        <p>{comment}</p>
+      </div>
+    </div>
+  );
+}
