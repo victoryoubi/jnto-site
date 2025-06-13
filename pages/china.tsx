@@ -1,11 +1,8 @@
 import { useEffect } from 'react';
 import { google } from 'googleapis';
-import path from 'path';
-import { promises as fs } from 'fs';
 
 export async function getStaticProps() {
-  const credentialsPath = path.join(process.cwd(), 'opproject-459908-credentials.json');
-  const credentials = JSON.parse(await fs.readFile(credentialsPath, 'utf8'));
+  const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS!);
 
   const auth = new google.auth.GoogleAuth({
     credentials,
@@ -38,6 +35,10 @@ export default function ChinaPage({ comment }: { comment: string }) {
     script.id = 'infogram-async';
     document.body.appendChild(script);
 
+    script.onload = () => {
+      (window as any).InfogramEmbeds?.process?.();
+    };
+
     return () => {
       document.getElementById('infogram-async')?.remove();
     };
@@ -47,7 +48,7 @@ export default function ChinaPage({ comment }: { comment: string }) {
     <div className="p-4">
       <h1 className="text-xl font-bold mb-2">訪日中国人数の推移</h1>
 
-      {/* ✅ Hydration-safe: クライアント側のみで埋め込む */}
+      {/* Infogram 埋め込み */}
       <div
         className="infogram-embed"
         data-id="_/eWNhHjBxtMNjwWupHu5s"
